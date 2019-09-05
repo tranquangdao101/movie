@@ -1,0 +1,171 @@
+package com.bari.controller;
+ 
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+ 
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+ 
+import com.bari.dao.UserDao;
+import com.bari.model.User;
+ 
+public class UserController extends HttpServlet {
+    private static final long serialVersionUID = 1L;
+    private static String INSERT_OR_EDIT = "/user.jsp";
+    private static String LIST_USER = "/listuser.jsp";
+    private UserDao dao;
+ 
+    public UserController() {
+        super();
+        dao = new UserDao();
+    }
+ 
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String forward="";
+        String action = request.getParameter("action");
+ 
+        if (action.equalsIgnoreCase("delete")){
+            String userId = request.getParameter("userId");
+            dao.deleteUser(userId);
+            forward = LIST_USER;
+            request.setAttribute("users", dao.getAllUsers());    
+        } else if (action.equalsIgnoreCase("edit")){
+            forward = INSERT_OR_EDIT;
+            String userId = request.getParameter("userId");
+            User user = dao.getUserById(userId);
+            request.setAttribute("user", user);
+        } else if (action.equalsIgnoreCase("listUser")){
+            forward = LIST_USER;
+            request.setAttribute("users", dao.getAllUsers());
+        } else {
+            forward = INSERT_OR_EDIT;
+        }
+ 
+        RequestDispatcher view = request.getRequestDispatcher(forward);
+        view.forward(request, response);
+    }
+ 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        User user = new User();
+        user.setUname(request.getParameter("uname"));
+        user.setPassword(request.getParameter("pass"));
+        try {
+            Date reg = new SimpleDateFormat("yyyy/MM/dd").parse(request.getParameter("dob"));
+            System.out.println("rrrrrrrrrrr"+ reg);
+            user.setRegisteredon(reg);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        user.setEmail(request.getParameter("email"));
+        String userid = request.getParameter("uname");
+//        if(userid == null || userid.isEmpty())
+//        {
+//            dao.addUser(user);
+//        }
+//        else
+//        {
+            user.setUname(userid);
+            dao.checkUser(user);
+//        }
+        RequestDispatcher view = request.getRequestDispatcher(LIST_USER);
+        request.setAttribute("users", dao.getAllUsers());
+        view.forward(request, response);
+    }
+}
+
+!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>CRUD Example</title>
+    </head>
+    <body>
+        <jsp:forward page="/UserController?action=listuser" />
+    </body>
+</html>
+
+
+
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Add new user</title>
+    </head>
+    <body>
+        <form method="POST" action='UserController' name="frmAddUser">
+            <% String action = request.getParameter("action");
+                System.out.println(action);
+            %>
+            <% if (action.equalsIgnoreCase("edit")) {%>
+            User Name : <input type="text" name="uname"
+                               value="<c:out value="${user.uname}" />" readonly="readonly"/> (You Can't Change this)<br /> 
+            <%} else {%>
+            User Name : <input type="text" name="uname"
+                               value="<c:out value="${user.uname}" />" /> <br />
+            <%}%>
+            Password : <input
+                type="password" name="pass"
+                value="<c:out value="${user.password}" />" /> <br /> 
+            Email : <input
+                type="text" name="email"
+                value="<c:out value="${user.email}" />" /> <br /> 
+ 
+            <% if (action.equalsIgnoreCase("edit")) {%>
+            Registration : <input
+                type="text" name="dob"
+                value="<fmt:formatDate pattern="yyyy/MM/dd" value="${user.registeredon}" />" readonly="readonly"/>(You Can't Change this)  <br />
+            <%} else {%>
+            Registration : <input
+                type="text" name="dob"
+                value="<fmt:formatDate pattern="yyyy/MM/dd" value="${user.registeredon}" />" />(yyyy/MM/dd)  <br /> 
+            <%}%>
+            <input  type="submit" value="Submit" />
+        </form>
+    </body>
+</html>
+
+
+
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Show All Users</title>
+</head>
+<body>
+    <table border=1>
+        <thead>
+            <tr>
+                <th>User Name</th>
+                <th>Email</th>
+                <th>Registration Date</th>
+                <th colspan=2>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <c:forEach items="${users}" var="user">
+                <tr>
+                    <td><c:out value="${user.uname}" /></td>
+                    <td><c:out value="${user.email}" /></td>
+                    <td><fmt:formatDate pattern="dd MMM,yyyy" value="${user.registeredon}" /></td>
+                    <td><a href="UserController?action=edit&userId=<c:out value="${user.uname}"/>">Update</a></td>
+                    <td><a href="UserController?action=delete&userId=<c:out value="${user.uname}"/>">Delete</a></td>
+                </tr>
+            </c:forEach>
+        </tbody>
+    </table>
+    <p><a href="UserController?action=insert">Add User</a></p>
+</body>
+</html>
